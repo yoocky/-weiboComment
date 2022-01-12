@@ -9,12 +9,13 @@ import json
 
 
 headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:61.0) Gecko/20100101 Firefox/61.0"
 }
 Cookies = {
-    "Cookie": "SCF=AiXrHGxmHvYoZwOVcorshCOVyycl4YN4iKU0y9tD9c0ic0WDzPmCAW-dLJOQg6L0DJhJGdoH74bCQKhcsz8Ykaw.; SUB=_2A25M2vRaDeRhGeRM7lcR9SnFyzuIHXVsJJwSrDV6PUJbktCOLXT3kW1NU8iA5G0YXDEW9pIXu_I19mveRwLAPpzr; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WhAyIsZqj0o_zh7TN0ba6Tb5NHD95QEeo-feh-N1K5NWs4DqcjzUs8fqNiaMNet; SSOLoginState=1641972747; _T_WM=70127542407; XSRF-TOKEN=39eb6d; WEIBOCN_FROM=1110006030; MLOGIN=1; M_WEIBOCN_PARAMS=uicode%3D20000174"
+    "Cookie": "your cookie"
 }
 
+output_dir = '/weibo'
 
 class Weibo(object):
     # 用户信息，同时也能获取到uid、fid、oid等关键参数
@@ -137,11 +138,10 @@ class Weibo(object):
         page_url = "https://m.weibo.cn/api/comments/show?id={id}&page={page}"
         Resp = requests.get(url, headers=headers, cookies=Cookies)
         page_max_num = Resp.json()["data"]["max"]
-        path = os.getcwd() + "/{dirname}/".format(dirname=usr_id)
+        path = os.getcwd() + output_dir + "/{dirname}/".format(dirname=usr_id)
         if not os.path.exists(path):
           os.mkdir(path)
-        path2 = os.getcwd() + "/%s/%s.csv" % (usr_id, wb_id)
-        print(path2)
+        path2 = os.getcwd() + output_dir +  "/%s/%s.csv" % (usr_id, wb_id)
         csvfile = open(path2, "a+", encoding="utf-8", newline="")
         writer = csv.writer(csvfile)
         writer.writerow(
@@ -159,13 +159,13 @@ class Weibo(object):
             )
         )
         for i in range(1, page_max_num, 1):
+            time.sleep(3)
             p_url = page_url.format(id=wb_id, page=i)
             resp = requests.get(p_url, cookies=Cookies, headers=headers)
             print("fetched page: {0}, status code: {1}".format(i, resp.status_code))
-
+            
             if resp.status_code != 200:
                 continue
-
             resp_data = resp.json()
             try:
                 data = resp_data.get("data").get("data")
@@ -206,14 +206,15 @@ class Weibo(object):
                 print(resp_data)
                 print(resp_data["msg"])
                 continue
-            time.sleep(3)
         csvfile.close()
 
 
 wb = Weibo()
 
-# info = wb.usr_info(1810037440)
-# bloglist = wb.mblog_list(info['uid'], info['oid'])
+path = os.getcwd() + output_dir
+if not os.path.exists(path):
+          os.mkdir(path)
+
 with open("user_list.txt", "r") as f:
     for line in f.readlines():
         line = line.strip('\n').split('/')
