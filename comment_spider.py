@@ -9,10 +9,10 @@ import json
 
 
 headers = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:61.0) Gecko/20100101 Firefox/61.0"
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:61.0) Gecko/20100101 Firefox/61.0 weibo/1.2.1"
 }
 Cookies = {
-    "Cookie": "your cookie"
+    "Cookie": ""
 }
 
 output_dir = '/weibo'
@@ -137,6 +137,8 @@ class Weibo(object):
         url = "https://m.weibo.cn/api/comments/show?id={id}".format(id=wb_id)
         page_url = "https://m.weibo.cn/api/comments/show?id={id}&page={page}"
         Resp = requests.get(url, headers=headers, cookies=Cookies)
+        if Resp.json().get("data") == None:
+            return 
         page_max_num = Resp.json()["data"]["max"]
         path = os.getcwd() + output_dir + "/{dirname}/".format(dirname=usr_id)
         if not os.path.exists(path):
@@ -158,21 +160,22 @@ class Weibo(object):
                 "comment",
             )
         )
-        for i in range(1, page_max_num, 1):
+        page = 1
+        while page <= page_max_num:
             time.sleep(3)
-            p_url = page_url.format(id=wb_id, page=i)
+            p_url = page_url.format(id=wb_id, page=page)
             resp = requests.get(p_url, cookies=Cookies, headers=headers)
-            print("fetched page: {0}, status code: {1}".format(i, resp.status_code))
+            print("fetched page: {0}, status code: {1}".format(page, resp.status_code))
             
             if resp.status_code != 200:
                 continue
             resp_data = resp.json()
             try:
-                data = resp_data.get("data").get("data")
-                if data == None:
+                if resp_data.get("data") == None:
                     print(resp_data)
-                    continue
-
+                    break
+                data = resp_data.get("data").get("data")
+                
                 for d in data:
                     review_id = d["id"]
                     like_counts = d["like_counts"]
@@ -201,7 +204,8 @@ class Weibo(object):
                             comment,
                         )
                     )
-                    print("有%d页，已经爬了%d页   %s" % (page_max_num, i, comment))
+                print("有%d页，已经爬了%d页   %s" % (page_max_num, page, comment))
+                page += 1
             except:
                 print(resp_data)
                 print(resp_data["msg"])
