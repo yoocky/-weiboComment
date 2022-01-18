@@ -20,6 +20,7 @@ output_dir = '/weibo'
 class Weibo(object):
     # 用户信息，同时也能获取到uid、fid、oid等关键参数
     def usr_info(self, usr_id):
+        time.sleep(2)
         url = (
             "https://m.weibo.cn/api/container/getIndex?type=uid&value={usr_id}".format(
                 usr_id=usr_id
@@ -27,6 +28,8 @@ class Weibo(object):
         )
         resp = requests.get(url, headers=headers, cookies=Cookies)
         jsondata = resp.json().get("data")
+        if jsondata.get("userInfo") == None:
+            return {}
         nickname = jsondata.get("userInfo").get("screen_name")
         mblog_num = jsondata.get("userInfo").get("statuses_count")
         verified = jsondata.get("userInfo").get("verified")
@@ -36,40 +39,9 @@ class Weibo(object):
         mbrank = jsondata.get("userInfo").get("mbrank")
         followers_count = jsondata.get("userInfo").get("followers_count")
         follow_count = jsondata.get("userInfo").get("follow_count")
-        try:
-            uid = (
-                jsondata.get("userInfo")
-                .get("toolbar_menus")[0]
-                .get("params")
-                .get("uid")
-            )
-            fid = (
-                jsondata.get("userInfo")
-                .get("toolbar_menus")[1]
-                .get("actionlog")
-                .get("fid")
-            )
-            oid = (
-                jsondata.get("userInfo")
-                .get("toolbar_menus")[2]
-                .get("params")
-                .get("menu_list")[0]
-                .get("actionlog")
-                .get("oid")
-            )
-            cardid = (
-                jsondata.get("userInfo")
-                .get("toolbar_menus")[1]
-                .get("actionlog")
-                .get("cardid")
-            )
-        except:
-            uid = ""
-            fid = ""
-            oid = ""
-            cardid = ""
         containerid = jsondata.get("tabsInfo").get("tabs")[0].get("containerid")
         Info = {
+            "uid": usr_id,
             "nickname": nickname,
             "mblog_num": mblog_num,
             "verified": verified,
@@ -79,13 +51,8 @@ class Weibo(object):
             "mbrank": mbrank,
             "followers_count": followers_count,
             "follow_count": follow_count,
-            "uid": uid,
-            "fid": fid,
-            "cardid": cardid,
-            "containerid": containerid,
-            "oid": oid,
+            "containerid": containerid
         }
-        print(Info)
         return Info
 
     # 获取所有热门微博信息（所发微博内容，每条微博的评论id,转发数，评论数...）
@@ -175,7 +142,7 @@ class Weibo(object):
                     print(resp_data)
                     break
                 data = resp_data.get("data").get("data")
-                
+                print(data)
                 for d in data:
                     review_id = d["id"]
                     like_counts = d["like_counts"]
@@ -211,17 +178,63 @@ class Weibo(object):
                 print(resp_data["msg"])
                 continue
         csvfile.close()
-
-
+    # 读取文件，获取所有帖子评论
+    def get_comments_by_list(self, file = "user_list.txt"):
+        with open(file, "r") as f:
+            for line in f.readlines():
+                line = line.strip('\n').split('/')
+                print(line)
+                wb.get_comments(*line)
+    # 读取文件，获取所有用户信息
+    def get_usr_info_by_list(self, file = "user_id_list.txt"):
+        path = os.getcwd() + output_dir +  "/userinfo.csv"
+        csvfile = open(path, "a+", encoding="utf-8", newline="")
+        writer = csv.writer(csvfile)
+        if len(csvfile.readlines()) < 1:
+            writer.writerow(
+                (
+                    "uid",
+                    "nickname",
+                    "mblog_num",
+                    "verified",
+                    "verified_reason",
+                    "gender",
+                    "urank",
+                    "mbrank",
+                    "followers_count",
+                    "follow_count",
+                    "containerid"
+                )
+            )
+        with open(file, "r") as f:
+            for line in f.readlines():
+                line = line.strip('\n')
+                print(line)
+                info = wb.usr_info(line)
+                print(info)
+                if info.get("uid") == None:
+                    continue
+                writer.writerow(
+                        (
+                            info["uid"],
+                            info["nickname"],
+                            info["mblog_num"],
+                            info["verified"],
+                            info["verified_reason"],
+                            info["gender"],
+                            info["urank"],
+                            info["mbrank"],
+                            info["followers_count"],
+                            info["follow_count"],
+                            info["containerid"]
+                        )
+                    )
+        csvfile.close()
 wb = Weibo()
 
 path = os.getcwd() + output_dir
 if not os.path.exists(path):
           os.mkdir(path)
 
-with open("user_list.txt", "r") as f:
-    for line in f.readlines():
-        line = line.strip('\n').split('/')
-        print(line)
-        wb.get_comments(*line)
+wb.get_usr_info_by_list()
 
